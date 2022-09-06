@@ -1,10 +1,9 @@
 import random
 import re 
 import sys
-from typing import Optional
+import json
+from typing import Optional, List
 from string import ascii_lowercase, digits, punctuation
-from vault.storage import read_content, write_content
-from vault.printer import printer
 
 COLLECTION = ascii_lowercase + ascii_lowercase.upper() + digits + punctuation
 OPTIONS = [
@@ -14,7 +13,6 @@ OPTIONS = [
     "\t4) Delete a database entry",
     "\t5) View database in tabular form"
 ]
-
 
 # Minimum password requirements
 #   1) minimum 8 characters
@@ -29,6 +27,72 @@ OPTIONS = [
 #   website_name1: {password1: username1},
 #   website_name2: {password2: username2},
 # }
+
+def read_content() -> dict:
+    try:
+        with open(r"PasswordVault.txt", "r") as file:
+            obj = json.load(file)
+            return obj 
+    except json.decoder.JSONDecodeError:
+        with open(r"PasswordVault.txt", "w") as file:
+            obj = json.dumps({}, indent=4)
+            file.write(obj)
+        return read_content()
+
+def write_content(data: dict) -> Optional[bool]:
+    try:
+        with open(r"PasswordVault.txt", "w") as file:
+            obj = json.dumps(data, indent= 4)
+            file.write(obj)
+            return True
+
+    except FileNotFoundError:
+        return
+
+def convert_dict_to_list(data: dict) -> List[List[str]]:
+    main_list = [["S.NO", "WEBSITE", "USERNAME", "PASSWORD"]]
+
+    for idx, entry in enumerate(data, start=1):
+        sub_list = []
+        sub_key = list(data[entry].keys())[0]
+        
+        sub_list.append(str(idx))
+        sub_list.append(entry)
+        sub_list.append(data[entry][sub_key])
+        sub_list.append(sub_key)
+        
+        main_list.append(sub_list)
+
+    return main_list
+
+def printer(data: dict) -> int:
+    table = convert_dict_to_list(data)
+
+    width = [max([len(x[i]) for x in table]) for i in range(len(table[0]))]
+    header = table.pop(0)
+    
+    for i in width:
+        print("+-" + "-".center(i, "-"), end = "-+")
+    print()
+    
+    for i, elem in enumerate(header):
+        print("| " + elem.center(width[i], " "), end = " |")
+    print()
+    
+    for i in width:
+        print("+-" + "-".center(i, "-"), end = "-+")
+    print()
+
+    for row in table:
+        for i, elem in enumerate(row):
+            print("| " + elem.center(width[i], " "), end = " |")
+        print()
+
+    for i in width:
+        print("+-" + "-".center(i, "-"), end = "-+")
+    print()
+
+    return len(width)
 
 def generate_password(length: int) -> Optional[str]:
     if length < 8:
@@ -208,13 +272,5 @@ def main(user_input: int = -1):
         main()
 
 if __name__ == "__main__":
-
-    print(r"""
-  ____   _    ____ ______        _____  ____  ____   __     ___   _   _ _   _____ 
- |  _ \ / \  / ___/ ___\ \      / / _ \|  _ \|  _ \  \ \   / / \ | | | | | |_   _|
- | |_) / _ \ \___ \___ \\ \ /\ / / | | | |_) | | | |  \ \ / / _ \| | | | |   | |  
- |  __/ ___ \ ___) |__) |\ V  V /| |_| |  _ <| |_| |   \ V / ___ \ |_| | |___| |  
- |_| /_/   \_\____/____/  \_/\_/  \___/|_| \_\____/     \_/_/   \_\___/|_____|_|  
-""")
-
+    print("password vault")
     main()
